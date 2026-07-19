@@ -16,6 +16,9 @@ TARGET_URLS = [
     "https://ar.stripchat.com/Capitana-arab",
     "https://stripchat.com/Zouzou_sexy",
     "https://stripchat.com/Miss_dou3ae",
+    "https://www.tango.me/hanm2",
+    "https://www.tango.me/albrnsyst-53",
+    "https://www.tango.me/mlk23",
 ]
 
 def send_telegram_message(message):
