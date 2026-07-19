@@ -146,11 +146,18 @@ for url in TARGET_URLS:
     group_name = url.split("/")[-1] if "/" in url else "group"
     
     if check_live_status(url):
-        send_telegram_message(f"Live started in {group_name}! Recording 20 mins slice via Streamlink...")
+        send_telegram_message(f"Live started in {group_name}! Recording 20 mins slice...")
         output_filename = f"recorded_{group_name}.mp4"
         
         user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-        streamlink_cmd = f'streamlink "{url}" best -o "{output_filename}" --max-duration 20m --http-header "User-Agent={user_agent}" --http-header "Referer=https://www.google.com/" --stream-segment-timeout 30 --stream-timeout 30'
+        
+        # إذا كان الموقع تانجو أو سوبر لايف، يفضل استخدام yt-dlp لأنه أقوى في استخراج البث المشفر
+        if "tango" in url or "sprlv" in url or "superlive" in url:
+            streamlink_cmd = f'yt-dlp "{url}" --user-agent "{user_agent}" --referer "https://www.google.com/" -o "{output_filename}" --max-filesize 2000M --downloader ffmpeg --downloader-args "ffmpeg:-t 1200" --quiet'
+        else:
+            # لمواقع ستريبشات وباقي القائمة
+            streamlink_cmd = f'streamlink "{url}" best -o "{output_filename}" --max-duration 20m --http-header "User-Agent={user_agent}" --http-header "Referer=https://www.google.com/" --stream-segment-timeout 30 --stream-timeout 30'
+            
         os.system(streamlink_cmd)
         
         send_telegram_message(f"Recording finished/sliced for {group_name}! Checking file...")
@@ -168,4 +175,4 @@ for url in TARGET_URLS:
         
 print("Checked all groups. Job finished.")
 send_telegram_message("All groups checked. Current cycle finished.")
-        
+    
