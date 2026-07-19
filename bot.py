@@ -2,6 +2,7 @@ import os
 import time
 import requests
 import math
+import cloudscraper
 
 BOT_TOKEN = "8992382338:AAFVgtp5cSnEqHh7pHMyvGYh0FYbRTs831I"
 CHAT_ID = "973785378"
@@ -23,7 +24,6 @@ TARGET_URLS = [
     "https://sprlv.link/u/EJAAwLDAIAA",
     "https://www.tango.me/mlk23",
     "https://sprlv.link/u/0KAgMNBQEAA",
-    
 ]
 
 def send_telegram_message(message):
@@ -109,24 +109,28 @@ def split_and_send_video(file_path, group_name):
 
 def check_live_status(url):
     try:
+        scraper = cloudscraper.create_scraper(
+            browser={
+                'browser': 'chrome',
+                'platform': 'windows',
+                'desktop': True
+            }
+        )
         headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Accept-Language': 'en-US,en;q=0.9'
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Referer': 'https://www.google.com/'
         }
-        response = requests.get(url, headers=headers, timeout=15)
+        response = scraper.get(url, headers=headers, timeout=15)
         html_content = response.text.lower()
-        if "live" in html_content or '"islive":true' in html_content or 'is_live' in html_content:
+        
+        if "live" in html_content or '"islive":true' in html_content or 'is_live' in html_content or 'stream' in html_content or 'broadcaster' in html_content:
             return True
         return False
     except Exception as e:
         print(f"Connection error for {url}: {e}")
         return False
 
-send_telegram_message("Bot is now running and monitoring 9 groups with auto-split & max-duration feature...")
-
-while True:
-    try:
-        try:
+try:
     current_files = os.listdir('.')
     files_text = "\n".join([f"File: {f} ({os.path.getsize(f)/(1024*1024):.1f}MB)" for f in current_files if f.endswith('.mp4')])
     if not files_text:
@@ -143,10 +147,11 @@ for url in TARGET_URLS:
     
     if check_live_status(url):
         send_telegram_message(f"Live started in {group_name}! Recording 20 mins slice via Streamlink...")
-        
         output_filename = f"recorded_{group_name}.mp4"
         
-        os.system(f'streamlink "{url}" best -o "{output_filename}" --max-duration 20m')
+        user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        streamlink_cmd = f'streamlink "{url}" best -o "{output_filename}" --max-duration 20m --http-header "User-Agent={user_agent}" --http-header "Referer=https://www.google.com/" --stream-segment-timeout 30 --stream-timeout 30'
+        os.system(streamlink_cmd)
         
         send_telegram_message(f"Recording finished/sliced for {group_name}! Checking file...")
         
@@ -157,9 +162,10 @@ for url in TARGET_URLS:
             except:
                 pass
         else:
-            send_telegram_message(f"Failed: No valid video file created for {group_name}. Live might be protected or too short.")
+            send_telegram_message(f"Failed: No valid video file created for {group_name}. Live might be protected, needs tokens, or too short.")
     
     time.sleep(2)
         
 print("Checked all groups. Job finished.")
 send_telegram_message("All groups checked. Current cycle finished.")
+        
