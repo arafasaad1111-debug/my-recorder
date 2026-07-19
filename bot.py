@@ -126,42 +126,40 @@ send_telegram_message("Bot is now running and monitoring 9 groups with auto-spli
 
 while True:
     try:
-        current_files = os.listdir('.')
-        files_text = "\n".join([f"File: {f} ({os.path.getsize(f)/(1024*1024):.1f}MB)" for f in current_files if f.endswith('.mp4')])
-        if not files_text:
-            files_text = "No recorded video files found in directory right now."
-        send_telegram_message(f"--- Current Directory Report ---\n{files_text}")
-    except Exception as e:
-        print(f"Error checking directory: {e}")
+        try:
+    current_files = os.listdir('.')
+    files_text = "\n".join([f"File: {f} ({os.path.getsize(f)/(1024*1024):.1f}MB)" for f in current_files if f.endswith('.mp4')])
+    if not files_text:
+        files_text = "No recorded video files found in directory right now."
+    send_telegram_message(f"--- Current Directory Report ---\n{files_text}")
+except Exception as e:
+    print(f"Error checking directory: {e}")
 
-    for url in TARGET_URLS:
-        if "LINK_" in url:
-            continue
-            
-        group_name = url.split("/")[-1] if "/" in url else "group"
+for url in TARGET_URLS:
+    if "LINK_" in url:
+        continue
         
-        if check_live_status(url):
-            send_telegram_message(f"Live started in {group_name}! Recording 20 mins slice via Streamlink...")
-            
-            output_filename = f"recorded_{group_name}.mp4"
-            
-            # تم إضافة --max-duration لمنع البوت من التعليق للأبد في حساب واحد
-            os.system(f'streamlink "{url}" best -o "{output_filename}" --max-duration 20m')
-            
-            send_telegram_message(f"Recording finished/sliced for {group_name}! Checking file...")
-            
-            if os.path.exists(output_filename) and os.path.getsize(output_filename) > 1024*1024:
-                split_and_send_video(output_filename, group_name)
-                try:
-                    os.remove(output_filename)
-                except:
-                    pass
-            else:
-                send_telegram_message(f"Failed: No valid video file created for {group_name}. Live might be protected or too short.")
+    group_name = url.split("/")[-1] if "/" in url else "group"
+    
+    if check_live_status(url):
+        send_telegram_message(f"Live started in {group_name}! Recording 20 mins slice via Streamlink...")
         
-        # حماية من الحظر بين فحص كل حساب والتاني
-        time.sleep(2)
-            
-    print("Checked all groups. Waiting 5 minutes for next check...")
-    send_telegram_message("All groups checked. Waiting 5 minutes for the next cycle...")
-    time.sleep(300)
+        output_filename = f"recorded_{group_name}.mp4"
+        
+        os.system(f'streamlink "{url}" best -o "{output_filename}" --max-duration 20m')
+        
+        send_telegram_message(f"Recording finished/sliced for {group_name}! Checking file...")
+        
+        if os.path.exists(output_filename) and os.path.getsize(output_filename) > 1024*1024:
+            split_and_send_video(output_filename, group_name)
+            try:
+                os.remove(output_filename)
+            except:
+                pass
+        else:
+            send_telegram_message(f"Failed: No valid video file created for {group_name}. Live might be protected or too short.")
+    
+    time.sleep(2)
+        
+print("Checked all groups. Job finished.")
+send_telegram_message("All groups checked. Current cycle finished.")
